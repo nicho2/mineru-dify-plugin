@@ -44,6 +44,14 @@ credentials_for_provider:
           en_US: MinerU Official API
           ja_JP: MinerU公式API
           zh_Hans: MinerU官方API
+  verify_ssl:
+    label:
+      en_US: Verify SSL
+      ja_JP: SSL証明書を検証する
+      zh_Hans: 验证SSL证书
+    required: false
+    type: boolean
+    default: true
 
 identity:
   author: langgenius
