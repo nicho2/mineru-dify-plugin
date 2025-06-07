@@ -24,6 +24,7 @@ class Credentials:
     base_url: str
     token: str
     server_type: str
+    verify_ssl: bool = True
 
 @dataclass
 class ZipContent:
@@ -48,13 +49,18 @@ class MineruTool(Tool):
         base_url = self.runtime.credentials.get("base_url")
         server_type = self.runtime.credentials.get("server_type")
         token = self.runtime.credentials.get("token")
+        verify_ssl_value = self.runtime.credentials.get("verify_ssl", True)
+        if isinstance(verify_ssl_value, str):
+            verify_ssl = verify_ssl_value.lower() in ("true", "1", "yes", "on")
+        else:
+            verify_ssl = bool(verify_ssl_value)
         if not base_url:
             logger.error("Missing base_url in credentials")
             raise ToolProviderCredentialValidationError("Please input base_url")
         if server_type=="remote" and not token:
             logger.error("Missing token for remote server type")
             raise ToolProviderCredentialValidationError("Please input token")
-        return Credentials(base_url=base_url, server_type=server_type, token=token)
+        return Credentials(base_url=base_url, server_type=server_type, token=token, verify_ssl=verify_ssl)
 
 
     @staticmethod
@@ -86,14 +92,24 @@ class MineruTool(Tool):
         if credentials.server_type=="local":
             url = self._build_api_url(credentials.base_url, "docs")
             logger.info(f"Validating local server connection to {url}")
-            response = get(url, headers=self._get_headers(credentials),timeout=10)
+            response = get(
+                url,
+                headers=self._get_headers(credentials),
+                timeout=10,
+                verify=credentials.verify_ssl,
+            )
             if response.status_code != 200:
                 logger.error(f"Local server validation failed with status {response.status_code}")
                 raise ToolProviderCredentialValidationError("Please check your base_url")
         elif credentials.server_type=="remote":
             url = self._build_api_url(credentials.base_url, "api/v4/file-urls/batch")
             logger.info(f"Validating remote server connection to {url}")
-            response = post(url, headers=self._get_headers(credentials),timeout=10)
+            response = post(
+                url,
+                headers=self._get_headers(credentials),
+                timeout=10,
+                verify=credentials.verify_ssl,
+            )
             if response.status_code!= 200:
                 logger.error(f"Remote server validation failed with status {response.status_code}")
                 raise ToolProviderCredentialValidationError("Please check your base_url and token")
@@ -122,7 +138,13 @@ class MineruTool(Tool):
         file_data = {
             "file": (file.filename, file.blob),
         }
-        response = post(task_url, headers=headers, params=params, files=file_data)
+        response = post(
+            task_url,
+            headers=headers,
+            params=params,
+            files=file_data,
+            verify=credentials.verify_ssl,
+        )
         if response.status_code != 200:
             logger.error(f"File parse failed with status {response.status_code}")
             yield self.create_text_message(f"Failed to parse file. result: {response.text}")
@@ -175,7 +197,12 @@ class MineruTool(Tool):
             ]
         }
         task_url = self._build_api_url(credentials.base_url, "api/v4/file-urls/batch")
-        response = post(task_url, headers=header, json=data)
+        response = post(
+            task_url,
+            headers=header,
+            json=data,
+            verify=credentials.verify_ssl,
+        )
 
         if response.status_code != 200:
             logger.error('apply upload url failed. status:{} ,result:{}'.format(response.status_code, response.text))
@@ -188,7 +215,7 @@ class MineruTool(Tool):
             batch_id = result["data"]["batch_id"]
             urls = result["data"]["file_urls"]
 
-            res_upload = put(urls[0], data=file.blob)
+            res_upload = put(urls[0], data=file.blob, verify=credentials.verify_ssl)
             if res_upload.status_code == 200:
                 logger.info(f"{urls[0]} upload success")
             else:
@@ -197,7 +224,10 @@ class MineruTool(Tool):
 
             extract_result = self._poll_get_parse_result(credentials, batch_id)
 
-            yield from self._download_and_extract_zip(extract_result.get("full_zip_url"))
+            yield from self._download_and_extract_zip(
+                extract_result.get("full_zip_url"),
+                credentials,
+            )
             yield self.create_variable_message("full_zip_url", extract_result.get("full_zip_url"))
         else:
             logger.error('apply upload url failed,reason:{}'.format(result.msg))
@@ -212,7 +242,7 @@ class MineruTool(Tool):
         retry_interval = 5
 
         for _ in range(max_retries):
-            response = get(url, headers=headers)
+            response = get(url, headers=headers, verify=credentials.verify_ssl)
             if response.status_code == 200:
                 data = response.json().get("data", {})
                 extract_result = data.get("extract_result", {})[0]
@@ -233,9 +263,13 @@ class MineruTool(Tool):
         raise TimeoutError("Parse operation timed out")
 
 
-    def _download_and_extract_zip(self, url: str) -> Generator[ToolInvokeMessage, None, None]:
+    def _download_and_extract_zip(
+        self,
+        url: str,
+        credentials: Credentials,
+    ) -> Generator[ToolInvokeMessage, None, None]:
         """Download and extract zip file from URL."""
-        response = httpx.get(url)
+        response = httpx.get(url, verify=credentials.verify_ssl)
         response.raise_for_status()
 
         content = ZipContent()
