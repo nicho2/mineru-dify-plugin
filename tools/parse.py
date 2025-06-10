@@ -17,6 +17,11 @@ from dify_plugin.entities.tool import ToolInvokeMessage
 from dify_plugin.errors.tool import ToolProviderCredentialValidationError
 from yarl import URL
 
+from types import MethodType
+from dify_plugin.core.runtime import BackwardsInvocation
+from dify_plugin.core.entities.invocation import InvokeType
+import requests
+
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -41,6 +46,56 @@ class ZipContent:
         if self.images is None:
             self.images = []
 
+
+class FileWrapper:
+    def __init__(self, file_pydantic):
+        self._file = file_pydantic
+
+def my_blob(self) -> bytes:
+    """
+    Get the file content as a bytes object.
+
+    If the file content is not loaded yet, it will be loaded from the URL and stored in the `_blob` attribute.
+    """
+    if self._file._blob is None:
+        response = httpx.get(self._file.url,verify=False)
+        response.raise_for_status()
+        self._file._blob = response.content
+
+    assert self._file._blob is not None
+    return self._file._blob
+
+
+class Upload_File(BackwardsInvocation[dict]):
+    def upload(self, filename: str, content: bytes, mimetype: str, verify_ssl=True) -> UploadFileResponse:
+        """
+        Upload a file
+
+        :param filename: file name
+        :param content: file content
+        :param mimetype: file mime type
+
+        :return: file id
+        """
+        for response in self._backwards_invoke(
+            InvokeType.UploadFile,
+            dict,
+            {
+                "filename": filename,
+                "mimetype": mimetype,
+            },
+        ):
+            url = response.get("url")
+            if not url:
+                raise Exception("upload file failed, could not get signed url")
+
+            response = requests.post(url, files={"file": (filename, content, mimetype)}, verify=verify_ssl)  # noqa: S113
+            if response.status_code != 201:
+                raise Exception(f"upload file failed, status code: {response.status_code}, response: {response.text}")
+
+            return UploadFileResponse(**response.json())
+
+        raise Exception("upload file failed, empty response from server")
 
 class MineruTool(Tool):
 
@@ -118,6 +173,12 @@ class MineruTool(Tool):
     def _parser_file_local(self, credentials: Credentials, tool_parameters: Dict[str, Any]):
         """Parse files by local server."""
         file = tool_parameters.get("file")
+        self.session.file = Upload_File(self.session)
+        # Liaison de la fonction à l'instance file uniquement
+        my_file = FileWrapper(file)
+        print(dir(my_file))
+        my_file.my_blob = MethodType(my_blob, my_file)
+        #file = my_file
         if not file:
             logger.error("No file provided for file parsing")
             raise ValueError("File is required")
@@ -126,6 +187,7 @@ class MineruTool(Tool):
 
         headers = self._get_headers(credentials)
         task_url = self._build_api_url(credentials.base_url, "file_parse")
+        print(task_url)
         logger.info(f"Starting file parse request to {task_url}")
         params = {
             'parse_method': tool_parameters.get('parse_method', 'auto'),
@@ -136,8 +198,9 @@ class MineruTool(Tool):
         }
 
         file_data = {
-            "file": (file.filename, file.blob),
+            "file": (file.filename, my_file.my_blob()),
         }
+
         response = post(
             task_url,
             headers=headers,
@@ -154,7 +217,7 @@ class MineruTool(Tool):
         md_content = response_json.get("md_content", "")
         content_list = response_json.get("content_list", [])
         file_obj = response_json.get("images", {})
-
+        print(f"md_content {md_content}")
         images = []
         for file_name, encoded_image_data in file_obj.items():
             base64_data = encoded_image_data.split(",")[1]
@@ -162,7 +225,8 @@ class MineruTool(Tool):
             file_res = self.session.file.upload(
                 file_name,
                 image_bytes,
-                "image/jpeg"
+                "image/jpeg",
+                verify_ssl=credentials.verify_ssl
             )
             images.append(file_res)
             if not file_res.preview_url:

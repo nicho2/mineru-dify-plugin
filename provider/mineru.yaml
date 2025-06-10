@@ -63,7 +63,7 @@ credentials_for_provider:
     default: true
 
 identity:
-  author: langgenius
+  author: langgenius_nicho2
   name: mineru
   label:
     en_US: MinerU
