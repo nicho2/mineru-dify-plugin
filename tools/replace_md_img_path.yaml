@@ -5,10 +5,12 @@ identity:
     en_US: Replace Markdown Image Path
     zh_Hans: 替换Markdown文本内图片路径
     pt_BR: Substituir Caminho da Imagem no Markdown
+    fr_FR: Remplacer le chemin des images Markdown
 description:
   human:
     en_US: A tool for replacing image paths in Markdown text with image URLs.
     zh_Hans: 一个用于将Markdown文本中的图片路径替换为图片URL的工具。
+    fr_FR: Un outil pour remplacer les chemins d'image dans le texte Markdown par des URL d'images.
   llm: A tool for replacing image paths in Markdown text with image URLs.
 parameters:
   - name: markdown_text
@@ -17,9 +19,11 @@ parameters:
     label:
       en_US: Markdown Text
       zh_Hans: Markdown文本
+      fr_FR: Texte Markdown
     human_description:
       en_US: The Markdown text containing image paths to be replaced.
       zh_Hans: 包含要替换的图片路径的Markdown文本。
+      fr_FR: Le texte Markdown contenant les chemins d'image à remplacer.
     llm_description: The Markdown text containing image paths to be replaced.
     form: llm
   - name: file_list
@@ -28,9 +32,11 @@ parameters:
     label:
       en_US:  Parse PDF Output File List
       zh_Hans: 解析PDF插件输出的文件列表
+      fr_FR: Liste de fichiers de sortie de l'analyse PDF
     human_description:
         en_US: Parse PDF Output File List
         zh_Hans: 解析PDF插件输出的文件列表
+        fr_FR: Liste de fichiers de sortie de l'analyse PDF
     llm_description: Parse PDF Output File List
     form: llm
 
