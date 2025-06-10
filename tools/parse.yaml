@@ -180,7 +180,7 @@ parameters:
       zh_Hans: '（用于官方API）示例：["docx","html"],markdown、json为默认导出格式，无须设置，该参数仅支持docx、html、latex三种格式中的一个或多个'
       en_US: '(For official API) Example: ["docx","html"], markdown, json are the default export formats, no need to set, this parameter only supports one or more of docx, html, latex'
       ja_JP: '（公式API用）例：["docx","html"]、markdown、jsonはデフォルトのエクスポート形式であり、設定する必要はありません。このパラメータは、docx、html、latexの3つの形式のいずれかまたは複数のみをサポートします'
-      fr_FR: (Pour l'API officielle) Exemple : ["docx","html"], markdown et json sont les formats d'export par défaut, inutile de les définir. Ce paramètre prend en charge un ou plusieurs des formats docx, html, latex
+      fr_FR: '(Pour l''API officielle) Exemple : ["docx","html"], markdown et json sont les formats d''export par défaut, inutile de les définir. Ce paramètre prend en charge un ou plusieurs des formats docx, html, latex'
     llm_description: '(For official API) Example: ["docx","html"], markdown, json are the default export formats, no need to set, this parameter only supports one or more of docx, html, latex'
     form: form
 output_schema:
