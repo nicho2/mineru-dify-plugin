@@ -106,7 +106,7 @@ Refresh the page of your Dify instance, you should be able to see your Plugin in
 After all, just package your Plugin by running the following command:
 
 ```bash
-dify-plugin plugin package ./ROOT_DIRECTORY_OF_YOUR_PLUGIN
+dify plugin package ./ROOT_DIRECTORY_OF_YOUR_PLUGIN
 ```
 
 you will get a `plugin.difypkg` file, that's all, you can submit it to the Marketplace now, look forward to your Plugin being listed!
